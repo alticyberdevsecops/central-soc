@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Analysis Report</title>
+    <style>
+        body {
+            background-color: #0d1117;
+            color: #c9d1d9;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+            margin: 0;
+            padding: 20px;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            background-color: #161b22;
+            overflow: hidden;
+        }
+
+        .header-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 20px;
+            border-bottom: 1px solid #30363d;
+            background-color: #0d1117;
+        }
+
+        .header-top h1 {
+            font-size: 18px;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            font-weight: 600;
+        }
+
+        .header-top h1 i {
+            margin-right: 8px;
+            /* Placeholder for icon */
+        }
+
+        .badge-outline {
+            border: 1px solid #c9d1d9;
+            color: #c9d1d9;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+
+        .summary-banner {
+            padding: 16px 20px;
+            border-bottom: 1px solid #30363d;
+            font-size: 14px;
+        }
+
+        .badge-severity {
+            background-color: #d29922;
+            /* Medium Gold */
+            color: #000;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 12px;
+            margin-right: 6px;
+        }
+
+        .section-header {
+            background-color: #d29922;
+            /* Gold */
+            color: #000;
+            padding: 10px 20px;
+            font-weight: bold;
+            font-size: 13px;
+            text-transform: uppercase;
+            display: flex;
+        }
+
+        .section-header div {
+            flex: 1;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .data-table tr {
+            border-bottom: 1px solid #30363d;
+        }
+
+        .data-table th {
+            width: 200px;
+            padding: 16px 20px;
+            text-align: left;
+            color: #8b949e;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            vertical-align: top;
+        }
+
+        .data-table td {
+            padding: 16px 20px;
+            vertical-align: top;
+        }
+
+        .mitre-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 0;
+        }
+
+        .mitre-table th {
+            background-color: #d29922;
+            color: #000;
+            padding: 6px 12px;
+            text-transform: uppercase;
+            font-size: 12px;
+            border: none;
+            width: auto;
+        }
+
+        .mitre-table td {
+            padding: 8px 12px;
+            border-bottom: 1px solid #30363d;
+            font-size: 13px;
+        }
+
+        .mitre-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+
+        li {
+            margin-bottom: 4px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div class="header-top">
+            <h1>📊 Final Analysis Report</h1>
+            <div class="badge-outline">UNDETERMINED</div>
+        </div>
+
+        <div class="summary-banner">
+            A <span class="badge-severity">MEDIUM</span> severity incident was analyzed with 5% confidence.
+        </div>
+
+        <div class="section-header">
+            <div>INCIDENT SEVERITY</div>
+            <div style="text-align: center;">MEDIUM</div>
+        </div>
+
+        <table class="data-table">
+            <tr>
+                <th>INCIDENT ID</th>
+                <td>16 (Ticket: ATPL-69107)</td>
+            </tr>
+            <tr>
+                <th>SUMMARY</th>
+                <td>INC-16 is a new correlated Windows EID 4648 event (vendor_incident_id 69107, alert_id 361629) that is the eighth consecutive null-telemetry Privilege Escalation incident in a persistent DS:microsoft/Windows enrichment pipeline failure series spanning INC-8 through INC-16, rendering forensic analysis impossible despite an elevated XSIAM predicted_score of 80.</td>
+            </tr>
+
+            
+            <tr>
+                <th>MITRE ATTACK</th>
+                <td style="padding: 0;">
+                    <table class="mitre-table">
+                        <tr>
+                            <th>TACTIC</th>
+                            <th>TECHNIQUE_ID</th>
+                            <th>TECHNIQUE_NAME</th>
+                        </tr>
+                        
+                        <tr>
+                            <td>Privilege Escalation</td>
+                            <td>T1078</td>
+                            <td>Valid Accounts</td>
+                        </tr>
+                        
+                        <tr>
+                            <td>Privilege Escalation</td>
+                            <td>T1134</td>
+                            <td>Access Token Manipulation</td>
+                        </tr>
+                        
+                        <tr>
+                            <td>Lateral Movement</td>
+                            <td>T1550.002</td>
+                            <td>Use Alternate Authentication Material: Pass the Hash</td>
+                        </tr>
+                        
+                    </table>
+                </td>
+            </tr>
+            
+
+            <tr>
+                <th>CLASSIFICATION</th>
+                <td>UNDETERMINED</td>
+            </tr>
+            <tr>
+                <th>CONFIDENCE</th>
+                <td>5%</td>
+            </tr>
+            <tr>
+                <th>OBSERVATIONS</th>
+                <td>Alert ID: 361629. Vendor Incident ID: 69107. Title: A Logon was Attempted Using Explicit Credentials OR Runas. Category: Privilege Escalation. Source: Correlation. Tags: DOM:Security, DS:microsoft/Windows. Severity: MEDIUM. XSIAM predicted_score: 80. Ticket: ATPL-69107. Created: 2026-03-05T21:00:43 UTC. ALL telemetry null: host_name, host_ip, endpoint_id, all actor/action process fields, all network IPs/ports, all file hashes. DISTINCT from prior incidents: vendor_incident_id=69107 and alert_id=361629 are NEW values not present in INC-8 through INC-15. This is a genuinely new Windows EID 4648 correlation event, not a re-ingestion artifact. No XSIAM customer credentials linked - XQL blocked. No IOCs extractable. Prior series: INC-8 (361527/69093 conf 35), INC-9 to INC-12 (361589/69093 re-ingestions conf 5-20), INC-13 (361603/69102 conf 5), INC-14 (UNDETERMINED conf 5-10), INC-15 (UNDETERMINED conf 5-10). Eight consecutive unanalyzable Privilege Escalation incidents. Seven prior escalations produced zero remediation. DS:microsoft/Windows enrichment pipeline broken since 2026-03-05.</td>
+            </tr>
+            <tr>
+                <th>BUSINESS IMPACT</th>
+                <td>LOW confirmed immediate impact but CRITICAL systemic risk. Eight consecutive null-telemetry Privilege Escalation alerts represent a sustained and worsening blind spot in Windows credential abuse detection. Genuine EID 4648 exploitation (credential stuffing, RunAs abuse, Pass-the-Hash) is entirely invisible to the SOC. Repeated SLA consumption for zero-value analysis degrades MTTD/MTTR KPIs. DS:microsoft/Windows enrichment failure constitutes material non-compliance under SOC2 CC7.1/CC7.2 and ISO27001 A.12.4.1/A.12.4.3. XSIAM predicted_score of 80 indicates elevated algorithmic suspicion suggesting real-world credential abuse events are being systematically missed.</td>
+            </tr>
+
+            
+            <tr>
+                <th>RECOMMENDATIONS</th>
+                <td>
+                    <ul>
+                        
+                        <li>P0 ESCALATION: Eighth consecutive null-telemetry incident - escalate DS:microsoft/Windows pipeline outage to VP/CTO level immediately</li>
+                        
+                        <li>URGENT: Repair DS:microsoft/Windows telemetry enrichment pipeline broken since 2026-03-05</li>
+                        
+                        <li>URGENT: Link XSIAM customer credentials to unblock XQL retroactive investigation for INC-8 through INC-16</li>
+                        
+                        <li>Implement ingestion quarantine filter for all-null enrichment alerts pending pipeline fix</li>
+                        
+                        <li>Once pipeline restored: retroactive EID 4648 hunt across all domain-joined Windows hosts for 2026-03-05 to 2026-03-06 window</li>
+                        
+                        <li>Investigate XSIAM predicted_score=80 signals driving elevated ML score for INC-16</li>
+                        
+                        <li>Implement DS:microsoft/Windows pipeline health monitoring with automated P1 alerting</li>
+                        
+                        <li>Conduct formal post-incident RCA for pipeline outage scope and root cause</li>
+                        
+                        <li>Fix ingestion deduplication - implement idempotency check on vendor_incident_id + alert_id pair</li>
+                        
+                        <li>Implement SLA exemption for incidents with confirmed null-telemetry enrichment failure</li>
+                        
+                    </ul>
+                </td>
+            </tr>
+            
+
+            
+
+        </table>
+    </div>
+
+</body>
+
+</html>

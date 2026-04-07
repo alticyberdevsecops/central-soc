@@ -1,0 +1,335 @@
+"""
+Incident routes — all queries are tenant-scoped.
+super_admin can query across all tenants via ?tenant_id= param.
+"""
+import logging
+from typing import Optional
+from uuid import UUID
+from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import text
+from pydantic import BaseModel
+from incidents.database import get_db
+from incidents.auth import get_current_user
+
+router = APIRouter()
+logger = logging.getLogger("incidents.routes")
+
+
+class StatusUpdate(BaseModel):
+    status: str
+
+
+class AssignUpdate(BaseModel):
+    user_id: Optional[str] = None
+
+
+class CommentCreate(BaseModel):
+    content: str
+    is_internal: bool = False
+
+
+SCHEMA_CACHE = {}  # tenant_id -> schema_name
+
+async def get_schema_for_tenant(db: AsyncSession, tenant_id: Optional[str]) -> str:
+    if not tenant_id or str(tenant_id).lower() in ("public", "none"):
+        return "public"
+        
+    s_tid = str(tenant_id)
+    if s_tid in SCHEMA_CACHE:
+        return SCHEMA_CACHE[s_tid]
+    
+    try:
+        result = await db.execute(
+            text("SELECT schema_name FROM public.tenants WHERE id = CAST(:tid AS UUID)"),
+            {"tid": s_tid}
+        )
+        row = result.fetchone()
+        if row:
+            SCHEMA_CACHE[s_tid] = row[0]
+            return row[0]
+    except Exception as e:
+        logger.error(f"Error resolving schema for tenant {tenant_id}: {e}")
+        
+    return "public"
+
+
+async def get_schema_from_incident(db: AsyncSession, incident_id: str, user: dict) -> str:
+    _, _, target_tid = build_tenant_filter(user)
+    
+    t_sql = text("SELECT tenant_id FROM public.incidents WHERE id = CAST(:iid AS UUID)")
+    t_res = await db.execute(t_sql, {"iid": incident_id})
+    t_row = t_res.fetchone()
+    
+    if not t_row:
+        raise HTTPException(status_code=404, detail="Incident not found in global register")
+        
+    actual_tid = str(t_row[0]) if t_row[0] else None
+    
+    if user.get("role") != "super_admin" and target_tid and target_tid != actual_tid:
+        raise HTTPException(status_code=403, detail="Access denied")
+        
+    return await get_schema_for_tenant(db, actual_tid)
+
+
+def build_tenant_filter(user: dict, requested_tenant_id: Optional[str] = None) -> tuple[str, dict, Optional[str]]:
+    """
+    Return (where_clause, params, target_tenant_id).
+    For super_admin without requested_tenant_id, we return None to indicate global view.
+    """
+    role = user.get("role")
+    user_tenant_id = user.get("tenant_id")
+    target_tenant = requested_tenant_id if role == "super_admin" and requested_tenant_id else user_tenant_id
+
+    if role == "super_admin" and not requested_tenant_id:
+        return "1=1", {}, None
+    
+    return "1=1", {}, target_tenant
+
+
+@router.get("")
+async def list_incidents(
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
+    tenant_id: Optional[str] = Query(None, description="Filter by tenant (super_admin only)"),
+    severity: Optional[str] = Query(None),
+    status: Optional[str] = Query(None),
+    source_vendor: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(50, ge=1, le=200),
+    sort_by: str = Query("created_at"),
+    sort_dir: str = Query("desc"),
+):
+    where_clause_tpl, params, target_tid = build_tenant_filter(user, tenant_id)
+    
+    async with db as session:
+        # Schema switching
+        schema = await get_schema_for_tenant(session, target_tid)
+        await session.execute(text(f"SET search_path TO {schema}, public"))
+        
+        # Bypass RLS for super_admin global view
+        if user.get("role") == "super_admin" and not target_tid:
+            await session.execute(text("SET LOCAL row_security = OFF"))
+
+        conditions = ["1=1"] # Filter by tenant_id is now handled by search_path/schema
+
+        if severity:
+            conditions.append("severity = :severity")
+            params["severity"] = severity
+        if status:
+            conditions.append("status = :status")
+            params["status"] = status
+        if source_vendor:
+            conditions.append("source_vendor = :source_vendor")
+            params["source_vendor"] = source_vendor
+        if search:
+            conditions.append("(title ILIKE :search OR description ILIKE :search)")
+            params["search"] = f"%{search}%"
+
+        where_clause = " AND ".join(conditions)
+        sort_col = sort_by if sort_by in ("created_at", "severity", "status", "source_vendor", "title") else "created_at"
+        sort_direction = "DESC" if sort_dir.lower() == "desc" else "ASC"
+        offset = (page - 1) * page_size
+        params.update({"limit": page_size, "offset": offset})
+
+        count_sql = text(f"SELECT COUNT(*) FROM incidents WHERE {where_clause}")
+        data_sql = text(f"""
+            SELECT i.id, i.tenant_id, i.source_vendor, i.vendor_incident_id, i.title,
+                   i.description, i.severity, i.status, i.affected_hosts, i.affected_users,
+                   i.iocs, i.mitre_tactics, i.mitre_techniques, i.tags, i.vendor_url,
+                   i.source_created_at, i.created_at, i.updated_at, i.assigned_to,
+                   t.name AS tenant_name, t.slug AS tenant_slug,
+                   u.full_name AS assigned_to_name
+            FROM incidents i
+            LEFT JOIN public.tenants t ON t.id = i.tenant_id
+            LEFT JOIN public.users u ON u.id = i.assigned_to
+            WHERE {where_clause}
+            ORDER BY i.{sort_col} {sort_direction}
+            LIMIT :limit OFFSET :offset
+        """)
+
+        total_result = await session.execute(count_sql, params)
+        total = total_result.scalar()
+        result = await session.execute(data_sql, params)
+        rows = result.mappings().all()
+
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "total_pages": (total + page_size - 1) // page_size,
+        "incidents": [dict(row) for row in rows],
+    }
+
+
+@router.get("/stats")
+async def get_stats(
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
+    tenant_id: Optional[str] = Query(None),
+):
+    _, _, target_tid = build_tenant_filter(user, tenant_id)
+    
+    async with db as session:
+        schema = await get_schema_for_tenant(session, target_tid)
+        await session.execute(text(f"SET search_path TO {schema}, public"))
+        
+        # Bypass RLS for super_admin global view
+        if user.get("role") == "super_admin" and not target_tid:
+            await session.execute(text("SET LOCAL row_security = OFF"))
+
+        sql = text(f"""
+            SELECT
+                COUNT(*) FILTER (WHERE status = 'new') AS new_count,
+                COUNT(*) FILTER (WHERE status = 'triaging') AS triaging_count,
+                COUNT(*) FILTER (WHERE status = 'in_progress') AS in_progress_count,
+                COUNT(*) FILTER (WHERE severity = 'critical') AS critical_count,
+                COUNT(*) FILTER (WHERE severity = 'high') AS high_count,
+                COUNT(*) FILTER (WHERE severity = 'medium') AS medium_count,
+                COUNT(*) FILTER (WHERE severity = 'low') AS low_count,
+                COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '24 hours') AS last_24h,
+                COUNT(*) FILTER (WHERE created_at > NOW() - INTERVAL '7 days') AS last_7d,
+                source_vendor,
+                COUNT(*) AS vendor_count
+            FROM incidents
+            GROUP BY ROLLUP(source_vendor)
+        """)
+        result = await session.execute(sql)
+        rows = result.mappings().all()
+
+    summary = {}
+    vendor_breakdown = []
+    for row in rows:
+        r = dict(row)
+        if r.get("source_vendor") is None:
+            summary = {k: int(v or 0) for k, v in r.items() if k not in ("source_vendor", "vendor_count")}
+        else:
+            vendor_breakdown.append({"vendor": r["source_vendor"], "count": int(r.get("vendor_count") or 0)})
+
+    return {"summary": summary, "by_vendor": vendor_breakdown}
+
+
+@router.get("/{incident_id}")
+async def get_incident(
+    incident_id: str,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    async with db as session:
+        async with session.begin():
+            schema = await get_schema_from_incident(session, incident_id, user)
+            await session.execute(text(f"SET LOCAL search_path TO {schema}, public"))
+
+            sql = text(f"""
+                SELECT i.*, i.tenant_id, t.name AS tenant_name, t.slug AS tenant_slug,
+                       u.full_name AS assigned_to_name, u.email AS assigned_to_email
+                FROM incidents i
+                LEFT JOIN public.tenants t ON t.id = i.tenant_id
+                LEFT JOIN public.users u ON u.id = i.assigned_to
+                WHERE i.id = :incident_id
+            """)
+            result = await session.execute(sql, {"incident_id": incident_id})
+            row = result.mappings().first()
+
+            if not row:
+                raise HTTPException(status_code=404, detail="Incident not found")
+
+            # Fetch comments timeline
+            comment_sql = text("""
+                SELECT ic.*, u.full_name AS author_name, u.email AS author_email
+                FROM incident_comments ic
+                JOIN public.users u ON u.id = ic.author_id
+                WHERE ic.incident_id = :incident_id
+                ORDER BY ic.created_at ASC
+            """)
+            comments_result = await session.execute(comment_sql, {"incident_id": incident_id})
+            comments = [dict(c) for c in comments_result.mappings().all()]
+
+    incident = dict(row)
+    incident["comments"] = comments
+    return incident
+
+
+@router.patch("/{incident_id}/status")
+async def update_status(
+    incident_id: str,
+    body: StatusUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    valid_statuses = ("new", "triaging", "in_progress", "resolved", "false_positive", "escalated")
+    if body.status not in valid_statuses:
+        raise HTTPException(status_code=400, detail=f"Invalid status. Must be one of: {valid_statuses}")
+
+    async with db as session:
+        async with session.begin():
+            schema = await get_schema_from_incident(session, incident_id, user)
+            await session.execute(text(f"SET LOCAL search_path TO {schema}, public"))
+
+            params = {"incident_id": incident_id, "status": body.status}
+            sql = text(f"""
+                UPDATE incidents SET status = :status, updated_at = NOW()
+                WHERE id = :incident_id
+                RETURNING id
+            """)
+            result = await session.execute(sql, params)
+            if not result.fetchone():
+                raise HTTPException(status_code=404, detail="Incident not found or unauthorized")
+
+    return {"id": incident_id, "status": body.status}
+
+
+@router.post("/{incident_id}/assign")
+async def assign_incident(
+    incident_id: str,
+    body: AssignUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    async with db as session:
+        async with session.begin():
+            schema = await get_schema_from_incident(session, incident_id, user)
+            await session.execute(text(f"SET LOCAL search_path TO {schema}, public"))
+
+            params = {"incident_id": incident_id, "user_id": body.user_id}
+            sql = text(f"""
+                UPDATE incidents SET assigned_to = :user_id::uuid, updated_at = NOW()
+                WHERE id = :incident_id
+                RETURNING id
+            """)
+            result = await session.execute(sql, params)
+            if not result.fetchone():
+                raise HTTPException(status_code=404, detail="Incident not found or unauthorized")
+
+    return {"id": incident_id, "assigned_to": body.user_id}
+
+
+@router.post("/{incident_id}/comments")
+async def add_comment(
+    incident_id: str,
+    body: CommentCreate,
+    db: AsyncSession = Depends(get_db),
+    user: dict = Depends(get_current_user),
+):
+    async with db as session:
+        async with session.begin():
+            schema = await get_schema_from_incident(session, incident_id, user)
+            await session.execute(text(f"SET LOCAL search_path TO {schema}, public"))
+
+            sql = text("""
+                INSERT INTO incident_comments (incident_id, author_id, content, is_internal)
+                VALUES (:incident_id, :author_id, :content, :is_internal)
+                RETURNING id, created_at
+            """)
+            result = await session.execute(sql, {
+                "incident_id": incident_id,
+                "author_id": user.get("sub"),
+                "content": body.content,
+                "is_internal": body.is_internal,
+            })
+            row = result.fetchone()
+
+    if not row:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    return {"id": str(row[0]), "created_at": str(row[1])}

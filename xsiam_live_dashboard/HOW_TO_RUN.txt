@@ -1,0 +1,125 @@
+╔══════════════════════════════════════════════════════════════════╗
+║        XSIAM LIVE DASHBOARD — SETUP & BUILD GUIDE               ║
+║        AltISec Security  |  v1.0                                ║
+╚══════════════════════════════════════════════════════════════════╝
+
+There are TWO ways to run the dashboard:
+
+  A) Quick run (for developers / testing)  — Steps 1-4 below
+  B) Build a proper .app + .dmg installer  — Steps 5-6 below
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OPTION A — QUICK RUN (developer mode)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 1 — OPEN TERMINAL
+────────────────────────
+Press Command + Space, type "Terminal", press Enter.
+
+STEP 2 — INSTALL DEPENDENCIES (one time only)
+───────────────────────────────────────────────
+  pip3 install flask requests
+
+STEP 3 — NAVIGATE TO THE APP FOLDER
+──────────────────────────────────────
+  cd ~/Downloads/xsiam_live_dashboard
+
+STEP 4 — LAUNCH
+─────────────────
+  python3 launcher.py
+
+Your browser will open automatically. On first launch you will see
+a setup page — enter your XSIAM API credentials there.
+
+Credentials are saved to:  ~/.config/xsiam-dashboard/config.json
+(You only need to do this once — they persist across restarts.)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OPTION B — BUILD .APP + .DMG INSTALLER  (share with anyone)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+STEP 5 — INSTALL OPTIONAL BREW TOOL (recommended, one time)
+──────────────────────────────────────────────────────────────
+  brew install create-dmg
+
+(If you don't have Homebrew: https://brew.sh)
+If you skip this, the build will still work but the DMG won't have
+the custom background — it will just be a basic disk image.
+
+STEP 6 — RUN THE BUILD SCRIPT
+────────────────────────────────
+  cd ~/Downloads/xsiam_live_dashboard
+  bash build_mac.sh
+
+The script will:
+  1. Install PyInstaller + all dependencies
+  2. Generate the app icon (shield / XSIAM logo)
+  3. Bundle everything into:  dist/XSIAM Dashboard.app
+  4. Wrap it in a DMG:        dist/XSIAM_Dashboard_1.0.0.dmg
+
+Build time: ~2–3 minutes on a modern Mac.
+
+STEP 7 — INSTALL & DISTRIBUTE
+────────────────────────────────
+  1. Double-click dist/XSIAM_Dashboard_1.0.0.dmg
+  2. Drag "XSIAM Dashboard" → Applications
+  3. Eject the DMG
+  4. Launch from Applications or Spotlight
+
+GATEKEEPER WARNING (first launch)
+────────────────────────────────────
+Because the app is not signed with an Apple Developer certificate,
+macOS may show "App can't be opened because it is from an unidentified
+developer."
+
+Fix: Right-click the app → Open → Open (in the dialog that appears).
+Or in Terminal:
+  xattr -d com.apple.quarantine "/Applications/XSIAM Dashboard.app"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+GETTING YOUR XSIAM API CREDENTIALS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Open your XSIAM console in your browser
+2. Click ☰ (top left) → Settings → Configurations → API Keys
+3. Click "+ New Key"
+4. Name it "Dashboard"  |  Role: "Viewer"
+5. Click Generate
+6. COPY the Key and Key ID — you won't see the Key again!
+7. Your Tenant URL is in the browser address bar, e.g.:
+   api-yourcompany.xdr.in.paloaltonetworks.com
+
+Enter these three values on the setup page when first launching.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DASHBOARD FEATURES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ 📊 SOC Dashboard  (/):
+    - Live KPI cards, daily trend, severity donut
+    - Incidents & alerts tables with click-to-drill-down
+    - Filter by severity / status
+
+ 🛡  CISO Dashboard (/ciso):
+    - MTTD / MTTR / SLA compliance
+    - Critical alert trend, top alert sources
+    - Analyst workload heatmap
+
+ 📈 Executive Dashboard (/executive):
+    - Security Posture Score (0–100)
+    - RAG status cards for key metrics
+    - 30-day posture trend
+    - Board-ready recommendations
+
+ 🔍 Query Tab (30-day window):
+    - Free-text search by hostname, incident name, IP, CVE, user
+    - Filter by severity + status
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEED HELP?
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+If you see an error, copy the red text from Terminal and share it
+for diagnosis.  Common fixes:
+  - "Address already in use" → another process using port 5001;
+    the launcher auto-detects and uses a free port instead.
+  - "401 Unauthorized" → check API Key and Key ID are correct.
+  - "SSL Error" → expected behind corporate proxy; suppressed by default.

@@ -1,0 +1,286 @@
+version: "3.9"
+
+networks:
+  soc-net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+
+
+services:
+  # ─────────────────────────────────────────────────────
+  #  INFRASTRUCTURE
+  # ─────────────────────────────────────────────────────
+  postgres:
+    image: postgres:16-alpine
+    container_name: soc-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-soc_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-soc_secret_2024}
+      POSTGRES_DB: ${POSTGRES_DB:-central_soc}
+      TZ: Asia/Kolkata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./shared/db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5432:5432"
+    networks:
+      - soc-net
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U soc_admin -d central_soc" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: soc-redis
+    restart: unless-stopped
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_secret_2024} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    networks:
+      - soc-net
+    healthcheck:
+      test: [ "CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-redis_secret_2024}", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: soc-db-ui
+    restart: unless-stopped
+    ports:
+      - "8019:80"
+    networks:
+      - soc-net
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@admin.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'True'
+      PGADMIN_CONFIG_ENHANCED_COOKIE_PROTECTION: 'False'
+      PGADMIN_CONFIG_CONSOLE_LOG_LEVEL: '10'
+    volumes:
+      - ./shared/db/pgadmin:/var/lib/pgadmin
+
+  # ─────────────────────────────────────────────────────
+  #  MICROSERVICES
+  # ─────────────────────────────────────────────────────
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    container_name: soc-auth
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-soc_admin}:${POSTGRES_PASSWORD:-soc_secret_2024}@postgres:5432/${POSTGRES_DB:-central_soc}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret_2024}@redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-change_me_super_secret_jwt_key_2024}
+      JWT_ALGORITHM: HS256
+      ACCESS_TOKEN_EXPIRE_MINUTES: 60
+      REFRESH_TOKEN_EXPIRE_DAYS: 7
+      TZ: Asia/Kolkata
+    networks:
+      - soc-net
+    ports:
+      - "8013:8000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  ingestion-service:
+    build:
+      context: ./services/ingestion-service
+      dockerfile: Dockerfile
+    container_name: soc-ingestion
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-soc_admin}:${POSTGRES_PASSWORD:-soc_secret_2024}@postgres:5432/${POSTGRES_DB:-central_soc}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret_2024}@redis:6379/0
+      POLL_INTERVAL_DEFAULT: 300
+      TZ: Asia/Kolkata
+    networks:
+      - soc-net
+    ports:
+      - "8016:8000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  normalization-service:
+    build:
+      context: ./services/normalization-service
+      dockerfile: Dockerfile
+    container_name: soc-normalizer
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg2://${POSTGRES_USER:-soc_admin}:${POSTGRES_PASSWORD:-soc_secret_2024}@postgres:5432/${POSTGRES_DB:-central_soc}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret_2024}@redis:6379/0
+      TZ: Asia/Kolkata
+    networks:
+      - soc-net
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  incident-service:
+    build:
+      context: ./services/incident-service
+      dockerfile: Dockerfile
+    container_name: soc-incidents
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-soc_admin}:${POSTGRES_PASSWORD:-soc_secret_2024}@postgres:5432/${POSTGRES_DB:-central_soc}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret_2024}@redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-change_me_super_secret_jwt_key_2024}
+      AUTONOMOUS_SOC_URL: ${AUTONOMOUS_SOC_URL}
+      CALLBACK_URL_BASE: ${CALLBACK_URL_BASE}
+      TZ: Asia/Kolkata
+    networks:
+      - soc-net
+    ports:
+      - "8014:8000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  tenant-service:
+    build:
+      context: ./services/tenant-service
+      dockerfile: Dockerfile
+    container_name: soc-tenants
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-soc_admin}:${POSTGRES_PASSWORD:-soc_secret_2024}@postgres:5432/${POSTGRES_DB:-central_soc}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret_2024}@redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-change_me_super_secret_jwt_key_2024}
+      INGESTION_SERVICE_URL: http://ingestion-service:8000
+      TZ: Asia/Kolkata
+    networks:
+      - soc-net
+    ports:
+      - "8015:8000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  automation-service:
+    build:
+      context: ./services/automation-service
+      dockerfile: Dockerfile
+    container_name: soc-automation
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+asyncpg://${POSTGRES_USER:-soc_admin}:${POSTGRES_PASSWORD:-soc_secret_2024}@postgres:5432/${POSTGRES_DB:-central_soc}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-redis_secret_2024}@redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:-change_me_super_secret_jwt_key_2024}
+      INCIDENT_SERVICE_URL: http://incident-service:8000
+      TENANT_SERVICE_URL: http://tenant-service:8000
+      TZ: Asia/Kolkata
+    networks:
+      - soc-net
+    ports:
+      - "8017:8000"
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  api-gateway:
+    build:
+      context: ./services/api-gateway
+      dockerfile: Dockerfile
+    container_name: soc-gateway
+    restart: unless-stopped
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      incident-service:
+        condition: service_healthy
+      tenant-service:
+        condition: service_healthy
+    environment:
+      AUTH_SERVICE_URL: http://auth-service:8000
+      INCIDENT_SERVICE_URL: http://incident-service:8000
+      TENANT_SERVICE_URL: http://tenant-service:8000
+      INGESTION_SERVICE_URL: http://ingestion-service:8000
+      AUTOMATION_SERVICE_URL: http://automation-service:8000
+      JWT_SECRET: ${JWT_SECRET:-change_me_super_secret_jwt_key_2024}
+      TZ: Asia/Kolkata
+    ports:
+      - "8012:8000"
+    networks:
+      - soc-net
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+
+  ui-console:
+    build:
+      context: ./services/ui-console
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8012
+        NEXT_PUBLIC_WS_URL: ws://localhost:8012
+    container_name: soc-ui
+    restart: unless-stopped
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    ports:
+      - "8011:3000"
+    networks:
+      - soc-net
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8012
+      NEXT_PUBLIC_WS_URL: ws://localhost:8012
+      TZ: Asia/Kolkata

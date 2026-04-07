@@ -1,0 +1,50 @@
+# Central SOC Dashboard Build
+
+- [x] Phase 1: Planning & Architecture (Multi-tenancy, Microservices, RLS)
+- [x] Phase 2: Database & Shared Schema (PostgreSQL RLS, Unified Incident Schema)
+- [x] Phase 3: Auth & Identity Service (JWT, RBAC: super_admin, analyst, customer_admin)
+- [x] Phase 4: Ingestion & Connector Framework (XSIAM, CrowdStrike, SentinelOne, Defender)
+- [x] Phase 5: Normalization Service (Worker pipeline, Redis Queue, deduplication)
+- [x] Phase 6: Incident Service & WebSocket (REST API, Live Pub/Sub events)
+- [x] Phase 7: API Gateway (Nginx/FastAPI Proxy, Rate Limiting, JWT Guard)
+- [x] Phase 8: Tenant Management Service
+- [x] Phase 9: SOC Console UI (Next.js Dashboard, Dark Mode, Multi-tenant view)
+- [x] Phase 10: Seeding & Verification (Real-world demo data, Tata Play/HDFC seeds)
+- [x] Phase 11: UI Refactor & Design System
+    - [x] Plan CSS refactor and design system
+    - [x] Update `globals.css` with core design tokens and components
+    - [x] Refactor `app/dashboard/page.tsx` for layout correction
+    - [x] Update `components/StatCards.tsx` styling
+    - [x] Update `components/IncidentTable.tsx` styling
+    - [x] Verify UI on port 3001
+- [x] Phase 12: Functional Verification & Bug Fixing
+    - [x] Verify Login flow and session management
+    - [x] Test Dashboard data hydration (Stats, Tables, Tenants)
+    - [x] Validate Tenant Switching logic
+    - [x] Test real-time updates (WebSocket)
+    - [x] Verify navigation to Incident Details
+    - [x] Test Logout functionality
+    - [x] Fix Sidebar Navigation (centralized component)
+- [x] Phase 13: Implementing Missing Dashboard Pages
+    - [x] Create Live Monitoring view (/monitoring)
+    - [x] Create Tenants management view (/tenants)
+    - [x] Create Connectors configuration view (/connectors)
+    - [x] Final end-to-end verification of all routes
+- [x] Phase 14: Enterprise Customer Onboarding
+    - [x] Add Onboarding page (/onboarding)
+    - [x] Implement multi-step onboarding wizard
+    - [x] Integrate with tenant-service (POST /tenants)
+    - [x] Integrate with ingestion-service (POST /reload)
+    - [x] Add Onboarding to Sidebar (Super Admin only)
+    - [x] Onboard real customer with XSIAM credentials
+- [x] Phase 15: Mock Data Removal & Production Re-onboarding
+    - [x] Identify and disable mock data seeding logic
+    - [x] Clear database (Tenants, Incidents, Connectors)
+    - [x] Perform clean re-onboarding of ATPL NFR
+    - [x] Verify zero mock data remains in UI
+    - [x] Onboard real customer with XSIAM credentials
+- [x] Phase 16: RBAC & Customer Auto-Provisioning
+    - [x] Auto-generate secure passwords on onboarding
+    - [x] Restrict sidebar access (Dashboard, Monitoring, Settings) for customer admins
+    - [x] Build Settings page for password changes
+    - [x] Restrict connector wizard to XSIAM/XDR only
