@@ -63,8 +63,8 @@ export default function LoginPage() {
                         <Shield size={44} color="#fff" strokeWidth={1.8} />
                     </div>
 
-                    <h1 className="login-hero-title">Central SOC</h1>
-                    <p className="login-hero-subtitle">Enterprise Security Operations Center</p>
+                    <h1 className="login-hero-title">Central SOC v2.0</h1>
+                    <p className="login-hero-subtitle">Next-Gen AI Security Operations</p>
 
                     <div className="login-hero-divider" />
 
@@ -177,7 +177,7 @@ export default function LoginPage() {
                             <ShieldCheck size={14} />
                             <span>Protected by enterprise-grade security</span>
                         </div>
-                        <p className="login-form-footer-note">All sessions are monitored and logged for compliance</p>
+                        <p className="login-form-footer-note">v2.0.1 - All sessions are monitored and logged for compliance</p>
                     </div>
                 </div>
             </div>
