@@ -2,26 +2,26 @@
 
 up:
 	cp -n .env.example .env 2>/dev/null || true
-	docker compose up -d --build
+	docker-compose up -d --build
 
 down:
-	docker compose down
+	docker-compose down
 
 build:
-	docker compose build --no-cache
+	docker-compose build --no-cache
 
 logs:
-	docker compose logs -f
+	docker-compose logs -f
 
 seed:
-	docker compose exec normalization-service python /app/scripts/seed.py
+	docker-compose exec normalization-service python /app/scripts/seed.py
 
 reset:
-	docker compose down -v
-	docker compose up -d --build
+	docker-compose down -v
+	docker-compose up -d --build
 
 ps:
-	docker compose ps
+	docker-compose ps
 
 shell-db:
-	docker compose exec postgres psql -U soc_admin -d central_soc
+	docker-compose exec postgres psql -U soc_admin -d central_soc
