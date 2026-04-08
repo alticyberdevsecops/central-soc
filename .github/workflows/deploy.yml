@@ -1,4 +1,4 @@
-name: Deploy to Server
+name: Deploy to Local Server
 
 on:
   push:
@@ -6,26 +6,23 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    # Use 'self-hosted' so the job is picked up by your local machine
+    runs-on: self-hosted
     steps:
       - name: Checkout Code
         uses: actions/checkout@v3
 
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.SERVER_IP }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            # 1. Navigate to project folder
-            cd ~/central-soc
-            
-            # 2. Update code
-            git pull origin main
-            
-            # 3. Rebuild and restart services
-            make up
-            
-            # 4. Clean up old images (optional)
-            docker image prune -f
+      - name: Update and Restart
+        run: |
+          # 1. Navigate to project folder on your local server
+          cd ~/central-soc
+          
+          # 2. Update code
+          git pull origin main
+          
+          # 3. Rebuild and restart services
+          # It's important to run this locally on the host
+          make up
+          
+          # 4. Clean up old images (optional)
+          docker image prune -f
