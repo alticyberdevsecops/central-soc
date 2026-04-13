@@ -1,0 +1,28 @@
+name: Reset Server & Database (Fresh Start)
+
+on:
+  workflow_dispatch:
+    # Manual trigger only
+
+jobs:
+  reset:
+    name: Full Reset on Local Server
+    runs-on: self-hosted
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Perform Nuclear Reset
+        run: |
+          # 1. Navigate to project folder
+          cd ~/central-soc
+          
+          # 2. Pull latest automation logic (just in case)
+          git pull origin main
+          
+          # 3. Stop containers and DELETE VOLUMES (Wiped database)
+          # Uses the smart Makefile logic we just added
+          make reset
+          
+          # 4. Final Pruning
+          docker system prune -f --volumes

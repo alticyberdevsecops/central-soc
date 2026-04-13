@@ -58,7 +58,7 @@ function pct(val: number | null | undefined): string {
 }
 
 export default function Dashboard() {
-    const [activeTab, setActiveTab] = useState<DashboardTab>('overview');
+    const [activeTab, setActiveTab] = useState<DashboardTab>('ciso');
     const [stats, setStats] = useState<any>(null);
     const [tenants, setTenants] = useState<any[]>([]);
     const [userRole] = useState(Cookies.get('user_role') || '');
@@ -85,9 +85,10 @@ export default function Dashboard() {
                     
                     // If current active tab is not allowed, switch to the first allowed one
                     const allowed = me?.dashboards || [];
-                    if (allowed.length > 0 && !allowed.includes('all') && !allowed.includes(activeTab)) {
-                        setActiveTab(allowed[0] as DashboardTab);
-                    }
+                    // Commented out to ensure CISO dashboard remains the default
+                    // if (allowed.length > 0 && !allowed.includes('all') && !allowed.includes(activeTab)) {
+                    //     setActiveTab(allowed[0] as DashboardTab);
+                    // }
                     
                     // Keep cookie in sync so other pages stay consistent
                     if (liveAssignedIds.length > 0) {

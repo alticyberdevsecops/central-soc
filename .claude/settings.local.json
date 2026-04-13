@@ -153,7 +153,14 @@
       "Bash(grep -n \"Send Mail\\\\|Send Notification\\\\|sendEmail\\\\|Communications\" services/ui-console/app/incidents/[id]/page.tsx)",
       "Bash(grep -n \"CommunicationTimeline\\\\|interactions\" services/ui-console/app/incidents/[id]/page.tsx)",
       "Bash(grep -rn \"create-incident\\\\|CreateIncident\\\\|new-incident\\\\|NewIncident\\\\|createIncident\" 'C:\\\\Users\\\\Threat Hunting\\\\OneDrive - AltiSec Technologies Pvt. Ltd\\\\Desktop\\\\aman\\\\cental soc\\\\cental soc\\\\services\\\\ui-console' --include=*.tsx -l)",
-      "Bash(find 'C:\\\\Users\\\\Threat Hunting\\\\OneDrive - AltiSec Technologies Pvt. Ltd\\\\Desktop\\\\aman\\\\cental soc\\\\cental soc\\\\services\\\\ui-console/components' -type f \\\\\\(-name *monitor* -o -name *incident* -o -name *ticket* \\\\\\))"
+      "Bash(find 'C:\\\\Users\\\\Threat Hunting\\\\OneDrive - AltiSec Technologies Pvt. Ltd\\\\Desktop\\\\aman\\\\cental soc\\\\cental soc\\\\services\\\\ui-console/components' -type f \\\\\\(-name *monitor* -o -name *incident* -o -name *ticket* \\\\\\))",
+      "Bash(make reset:*)",
+      "Bash(docker builder:*)",
+      "Bash(docker system:*)",
+      "Bash(timeout 75 docker logs -f soc-ingestion)",
+      "Bash(timeout 90 docker logs -f soc-ingestion)",
+      "Bash(find 'C:\\\\Users\\\\Threat Hunting\\\\OneDrive - AltiSec Technologies Pvt. Ltd\\\\Desktop\\\\aman\\\\cental soc\\\\cental soc\\\\services\\\\ui-console\\\\app' -type f \\\\\\(-name *ciso* -o -name *dashboard* \\\\\\))",
+      "Bash(grep -E \"\\\\.py$\")"
     ]
   }
 }

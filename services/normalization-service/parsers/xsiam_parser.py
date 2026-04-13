@@ -16,6 +16,19 @@ class XSIAMParser(BaseParser):
         title = inc.get("incident_name") or inc.get("description") or "XSIAM Incident"
         source_ts = raw_incident.get("source_created_at")
         
+        mod_ts_ms = inc.get("modification_time")
+        last_updated_iso = None
+        if mod_ts_ms:
+            import pytz
+            from datetime import datetime
+            try:
+                utc_dt = datetime.fromtimestamp(mod_ts_ms / 1000, tz=pytz.UTC)
+                ist_tz = pytz.timezone('Asia/Kolkata')
+                ist_dt = utc_dt.astimezone(ist_tz)
+                last_updated_iso = ist_dt.isoformat()
+            except Exception:
+                pass
+        
         # Calculate Ticket ID using tenant info passed from worker
         tenant_name = raw_incident.get("tenant_name", "SOC")
         prefix = tenant_name[:4].upper()
@@ -194,4 +207,5 @@ class XSIAMParser(BaseParser):
             "mitre_techniques": inc.get("mitre_techniques_ids_and_names") or [],
             "raw_payload": enriched_payload,
             "source_created_at": source_ts,
+            "last_updated_at": last_updated_iso,
         }

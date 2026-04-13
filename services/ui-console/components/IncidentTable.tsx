@@ -197,13 +197,13 @@ export default function IncidentTable({ incidents, showTenant = false, onRefresh
                                 </td>
                                 <td style={{ fontSize: '0.8rem', color: 'var(--text-tertiary)' }}>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
-                                        <span suppressHydrationWarning>{formatDistanceToNow(new Date(inc.created_at), { addSuffix: true })}</span>
+                                        <span suppressHydrationWarning>{formatDistanceToNow(new Date(inc.source_created_at || inc.created_at), { addSuffix: true })}</span>
                                         <span suppressHydrationWarning style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-                                            {new Date(inc.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST
+                                            {new Date(inc.source_created_at || inc.created_at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST
                                         </span>
                                         {(() => {
                                             const updatedMs = inc.last_updated_at ? new Date(inc.last_updated_at).getTime() : (inc.updated_at ? new Date(inc.updated_at).getTime() : 0);
-                                            const createdMs = new Date(inc.created_at).getTime();
+                                            const createdMs = new Date(inc.source_created_at || inc.created_at).getTime();
                                             if (!updatedMs || updatedMs - createdMs < 10000) return null;
                                             return (
                                                 <span suppressHydrationWarning style={{

@@ -78,11 +78,11 @@ def upsert_incident(conn, incident: dict, schema: str) -> bool:
         INSERT INTO {schema}.incidents (
             tenant_id, ticket_id, source_vendor, vendor_incident_id, title, description,
             severity, status, affected_hosts, affected_users, iocs,
-            mitre_tactics, mitre_techniques, tags, raw_payload, source_created_at
+            mitre_tactics, mitre_techniques, tags, raw_payload, source_created_at, last_updated_at
         ) VALUES (
             :tenant_id, :ticket_id, :source_vendor, :vendor_incident_id, :title, :description,
             :severity, :status, :affected_hosts, :affected_users, :iocs,
-            :mitre_tactics, :mitre_techniques, :tags, :raw_payload, :source_created_at
+            :mitre_tactics, :mitre_techniques, :tags, :raw_payload, :source_created_at, COALESCE(CAST(:last_updated_at AS timestamp with time zone), NOW())
         )
         ON CONFLICT (source_vendor, vendor_incident_id) DO UPDATE
             SET title = EXCLUDED.title,
@@ -100,7 +100,7 @@ def upsert_incident(conn, incident: dict, schema: str) -> bool:
                 mitre_tactics = EXCLUDED.mitre_tactics,
                 mitre_techniques = EXCLUDED.mitre_techniques,
                 raw_payload = EXCLUDED.raw_payload,
-                last_updated_at = NOW(),
+                last_updated_at = EXCLUDED.last_updated_at,
                 updated_at = NOW()
         RETURNING id, (xmax = 0) AS is_new
     """)
@@ -122,6 +122,7 @@ def upsert_incident(conn, incident: dict, schema: str) -> bool:
         "tags": json.dumps(incident.get("tags", [])),
         "raw_payload": json.dumps(incident.get("raw_payload", {})),
         "source_created_at": incident.get("source_created_at"),
+        "last_updated_at": incident.get("last_updated_at"),
     })
     row = result.fetchone()
     conn.commit()

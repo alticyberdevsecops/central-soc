@@ -70,7 +70,7 @@ export default function Monitoring() {
     const fetchIncidents = useCallback(async (targetPage?: number) => {
         try {
             const p = targetPage ?? page;
-            const params: any = { page_size: PAGE_SIZE, page: p, sort_by: 'last_updated_at', sort_dir: 'desc' };
+            const params: any = { page_size: PAGE_SIZE, page: p, sort_by: 'source_created_at', sort_dir: 'desc' };
             if (filters.tenant_id) params.tenant_id = filters.tenant_id;
             if (filters.severity) params.severity = filters.severity;
             if (filters.status) params.status = filters.status;

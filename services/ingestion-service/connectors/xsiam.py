@@ -5,6 +5,7 @@ Fetches incidents via the XSIAM REST API using advanced auth headers.
 import string
 import secrets
 import time
+import asyncio
 import httpx
 from datetime import datetime, timezone
 from typing import Optional
@@ -62,16 +63,13 @@ class XSIAMConnector(ConnectorBase):
 
             ts_ms = int(effective_since.timestamp() * 1000)
             
-            # Use creation_time instead of modification_time to be safe
-            filters.append({"field": "creation_time", "operator": "gte", "value": ts_ms})
-            
-            # No status filter here - we will fetch everything and let the DB deduplicate
-            # This ensures we don't miss anything that has a status we didn't expect.
+            # Fetch any incident modified since the last poll, regardless of status.
+            filters.append({"field": "modification_time", "operator": "gte", "value": ts_ms})
 
             all_results = []
             search_from = 0
             batch_size = 100  # XSIAM API hard limit is 100
-            max_total = 1000  # Safety limit for a single sync window
+            max_total = 100   # Set to 100 as requested
 
             async with httpx.AsyncClient(timeout=30) as client:
                 while search_from < max_total:
@@ -105,12 +103,22 @@ class XSIAMConnector(ConnectorBase):
                         
                     self.logger.info(f"XSIAM: Fetched {len(incidents_raw)} incidents (offset {search_from})")
                     
-                    for inc in incidents_raw:
-                        incident_id = str(inc.get("incident_id"))
-                        # OPTIMIZATION: Skipping extra_data fetch during main poll to avoid 
-                        # bottlenecks with 100+ incidents. Core data is enough for CISO metrics.
-                        extra_data = {} 
-                        
+                    # Fetch extra_data (alerts, artifacts) for all incidents in this
+                    # batch concurrently, but cap at 10 parallel requests via a
+                    # semaphore to avoid overwhelming the XSIAM API connection pool.
+                    incident_ids = [str(inc.get("incident_id")) for inc in incidents_raw]
+                    semaphore = asyncio.Semaphore(10)
+
+                    async def _fetch_with_semaphore(iid: str) -> dict:
+                        async with semaphore:
+                            return await self._fetch_extra_data(iid, client)
+
+                    extra_data_list = await asyncio.gather(
+                        *[_fetch_with_semaphore(iid) for iid in incident_ids],
+                        return_exceptions=False
+                    )
+
+                    for inc, extra_data in zip(incidents_raw, extra_data_list):
                         ts = inc.get("creation_time")
                         if ts:
                             import pytz
@@ -120,11 +128,11 @@ class XSIAMConnector(ConnectorBase):
                             source_ts = ist_dt.isoformat()
                         else:
                             source_ts = None
-                        
+
                         all_results.append(RawIncident(
                             tenant_id=self.tenant_id,
                             source_vendor=self.VENDOR,
-                            vendor_incident_id=incident_id,
+                            vendor_incident_id=str(inc.get("incident_id")),
                             raw_payload={"incident": inc, "extra_data": extra_data},
                             source_created_at=source_ts
                         ))
@@ -140,8 +148,17 @@ class XSIAMConnector(ConnectorBase):
             self.logger.error(f"XSIAM fetch error: {e}", exc_info=True)
             raise e # Re-raise to let scheduler record the error
 
-    async def _fetch_extra_data(self, incident_id: str) -> dict:
-        """Fetch additional data (alerts, artifacts) for a specific incident."""
+    async def _fetch_extra_data(self, incident_id: str, client: httpx.AsyncClient | None = None) -> dict:
+        """Fetch alerts and artifacts for a specific incident.
+
+        Accepts an optional shared AsyncClient so the caller can reuse a single
+        connection pool across concurrent requests (avoids spawning a new TCP
+        connection per incident when called via asyncio.gather).
+
+        Uses a dedicated 60 s timeout (instead of the shared client's 30 s) because
+        heavy incidents with many alerts can take longer for the XSIAM server to
+        serialise.  One automatic retry is attempted on ReadTimeout before giving up.
+        """
         base_url = self._get_base_url()
         payload = {
             "request_data": {
@@ -149,17 +166,40 @@ class XSIAMConnector(ConnectorBase):
                 "alerts_limit": 1000
             }
         }
-        try:
-            async with httpx.AsyncClient(timeout=30) as client:
-                response = await client.post(
+        # Use a generous per-request timeout; extra_data payloads can be large.
+        extra_data_timeout = httpx.Timeout(connect=10, read=60, write=10, pool=10)
+
+        async def _do_request() -> dict:
+            # Always use a fresh, dedicated client for extra_data so the
+            # per-request timeout is applied cleanly regardless of the shared
+            # client's settings.
+            async with httpx.AsyncClient(timeout=extra_data_timeout) as c:
+                response = await c.post(
                     f"{base_url.rstrip('/')}/public_api/v1/incidents/get_incident_extra_data/",
                     json=payload,
                     headers=self._build_auth_headers(),
                 )
                 response.raise_for_status()
-                data = response.json()
-                return data.get("reply", {})
-        except Exception as e:
-            self.logger.error(f"Failed to fetch extra data for {incident_id}: {e}")
-            # Non-critical for the whole poll, but we can still alert
-            return {}
+                return response.json().get("reply", {})
+
+        # One retry on timeout — large-payload incidents occasionally need it.
+        for attempt in range(2):
+            try:
+                return await _do_request()
+            except httpx.ReadTimeout:
+                if attempt == 0:
+                    self.logger.warning(
+                        f"ReadTimeout fetching extra data for incident {incident_id} — retrying once..."
+                    )
+                    await asyncio.sleep(2)
+                    continue
+                self.logger.error(
+                    f"ReadTimeout fetching extra data for incident {incident_id} after retry — skipping alerts"
+                )
+                return {}
+            except Exception as e:
+                self.logger.error(
+                    f"Failed to fetch extra data for incident {incident_id}: {e}", exc_info=True
+                )
+                return {}
+        return {}  # unreachable, satisfies type checker

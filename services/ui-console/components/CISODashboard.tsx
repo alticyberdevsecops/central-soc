@@ -82,7 +82,7 @@ const MitreMatrix = ({ mitre, compact = false }: { mitre: any[]; compact?: boole
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: compact ? 'repeat(5, 1fr)' : 'repeat(3, 1fr)',
+      gridTemplateColumns: compact ? 'repeat(auto-fit, minmax(120px, 1fr))' : 'repeat(auto-fit, minmax(180px, 1fr))',
       gap: '0.75rem',
       padding: '0.25rem 0'
     }}>
@@ -756,7 +756,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
      ═══════════════════════════════════════════════════════════ */
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '0.5rem' }}>
+    <div className="ciso-dashboard-shell" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem', padding: '0.5rem' }}>
 
       {/* ── Global Threat Pulse (Ticker) ── */}
       <div style={{
@@ -797,8 +797,8 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
       `}</style>
 
       {/* ── 6-Tab Navigation & Controls ── */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
-        <div style={{ display: 'flex', gap: '0.25rem', overflowX: 'auto', flex: 1, paddingBottom: '2px' }}>
+      <div className="ciso-nav-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '0.5rem', marginBottom: '1rem' }}>
+        <div className="ciso-tab-strip" style={{ display: 'flex', gap: '0.25rem', overflowX: 'auto', flex: 1, paddingBottom: '2px' }}>
           {[
             { id: "posture", label: "Executive Overview", icon: Shield },
             { id: "threat_intel", label: "Threat Intelligence", icon: Globe },
@@ -827,7 +827,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
           ))}
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingRight: '1rem', flexShrink: 0 }}>
+        <div className="ciso-nav-controls" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingRight: '1rem', flexShrink: 0 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-tertiary)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase' }}>
             <Clock size={14} /> Window
           </div>
@@ -854,7 +854,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
       {activeTab === "posture" && (
         <>
           {/* Risk Gauge + Posture Bars + KPIs */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: '1.5rem' }}>
+          <div className="ciso-grid ciso-grid--hero" style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr 1fr', gap: '1.5rem' }}>
 
             {/* Risk Score Gauge */}
             <div className="liquid-glass" style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
@@ -912,7 +912,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
             </div>
 
             {/* KPI Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+            <div className="ciso-grid ciso-grid--2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
               <KPICard 
                 label="Avg MTT-Detection" 
                 value={`${socPerformance?.avg_mttd_min || 0}m`} 
@@ -937,7 +937,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
           </div>
 
           {/* Secondary Metrics */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+          <div className="ciso-grid ciso-grid--4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
             <div className="liquid-glass widget-hover" style={{ padding: '1rem', textAlign: 'center', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => openDrillDown("Critical Incidents", incidents.filter((x: any) => x.severity === 'critical'))}>
               <div style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-tertiary)', textTransform: 'uppercase' }}>Active Critical</div>
               <div style={{ fontSize: '1.25rem', fontWeight: 900, color: '#f85149', marginTop: '0.4rem' }}>{posture?.active_critical || 0}</div>
@@ -993,7 +993,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
           )}
 
           {/* Compact MITRE + Risky Users side by side */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1.5rem' }}>
+          <div className="ciso-grid ciso-grid--wide" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1.5rem' }}>
             {mitre.length > 0 && (
               <div className="liquid-glass widget-hover" style={{ padding: '1.5rem', cursor: 'pointer' }} onClick={() => openDrillDown("MITRE Tactic Coverage", mitre, "mitre")}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -1017,8 +1017,8 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
                 </h3>
                 <Download size={14} color="var(--text-tertiary)" onClick={(e) => { e.stopPropagation(); handleExportCSV(riskyUsers, 'risky_users'); }} />
               </div>
-              <div style={{ padding: '0' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 100px 80px', gap: '0', fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.01)' }}>
+              <div style={{ padding: '0', overflowX: 'auto' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 100px 80px', gap: '0', fontSize: '0.65rem', color: 'var(--text-tertiary)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em', padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', background: 'rgba(255,255,255,0.01)', minWidth: '460px' }}>
                   <span>User Identity</span>
                   <span style={{ textAlign: 'center' }}>Tier</span>
                   <span style={{ textAlign: 'center' }}>Last Active</span>
@@ -1030,7 +1030,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
                     const tier = u.tier || 'Watch';
                     const tierColor = u.tier_color || '#718096';
                     return (
-                      <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 100px 80px', gap: '0', alignItems: 'center', padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', transition: 'background 0.12s', cursor: 'pointer' }} className="row-hover" onClick={(e) => { e.stopPropagation(); openDrillDown(`User Risk: ${u.user}`, [u], "user_risk"); setSelectedEntity(u); }}>
+                      <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 100px 80px', gap: '0', alignItems: 'center', padding: '0.75rem 1.5rem', borderBottom: '1px solid var(--border-subtle)', transition: 'background 0.12s', cursor: 'pointer', minWidth: '460px' }} className="row-hover" onClick={(e) => { e.stopPropagation(); openDrillDown(`User Risk: ${u.user}`, [u], "user_risk"); setSelectedEntity(u); }}>
                         <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
                           <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             {u.leaked && <AlertTriangle size={12} color="#f85149" />}
@@ -1135,7 +1135,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
           </div>
 
           {/* Attack Surface + XQL Console */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1.5rem' }}>
+          <div className="ciso-grid ciso-grid--wide" style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: '1.5rem' }}>
             <div className="liquid-glass widget-hover" style={{ padding: '1.5rem', cursor: 'pointer', transition: 'all 0.2s' }} onClick={() => openDrillDown("Global Attack Surface Trace", attackSurface)}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                 <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -1167,12 +1167,12 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
             <div className={`liquid-glass ${isFullscreen ? 'fullscreen-console' : ''}`}
               style={{ padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'var(--ciso-console-bg)', transition: 'all 0.3s', zIndex: isFullscreen ? 1000 : 1 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="ciso-console-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
                     <Database size={16} color="var(--accent-primary)" />
                     <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)' }}>XSIAM Direct Query Engine</h3>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div className="ciso-console-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <select value={activeTemplate?.id || ""} onChange={(e) => {
                       const t = templates.find((x: any) => x.id === e.target.value);
                       if (t) {
@@ -1320,7 +1320,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
          ══════════════════════════════════════════════════════════ */}
       {activeTab === "threat_intel" && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1.5rem' }}>
+          <div className="ciso-grid ciso-grid--wide" style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '1.5rem' }}>
             {/* MITRE ATT&CK Full Matrix */}
             <div className="liquid-glass" style={{ padding: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
@@ -1379,7 +1379,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
           )}
 
           {/* Threat Actor / Intel Correlation */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+          <div className="ciso-grid ciso-grid--2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             <div className="liquid-glass" style={{ padding: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
                 <h3 style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
@@ -1405,7 +1405,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
                   <Search size={16} color="var(--accent-primary)" /> Intel Correlation Summary
                 </h3>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+              <div className="ciso-grid ciso-grid--3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                 {[
                   { label: 'IP Matches', value: intelMatches.ipMatches, color: '#f85149', icon: Globe },
                   { label: 'Domain Matches', value: intelMatches.domainMatches, color: '#d29922', icon: ExternalLink },
@@ -1495,7 +1495,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
           </div>
 
           {/* Notice Period + Privilege Misuse */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+          <div className="ciso-grid ciso-grid--2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
             {/* Notice Period Users */}
             <div className="liquid-glass" style={{ padding: '1.5rem' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
@@ -1641,7 +1641,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
           </div>
 
           {/* Leakage Events + Cloud Exposure + Timeline */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 0.8fr 1fr', gap: '1.5rem' }}>
+          <div className="ciso-grid ciso-grid--triad" style={{ display: 'grid', gridTemplateColumns: '1.3fr 0.8fr 1fr', gap: '1.5rem' }}>
             {/* Leakage Events Table */}
             <div className="liquid-glass" style={{ padding: '1.5rem', overflow: 'hidden' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
@@ -1749,7 +1749,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
          TAB 5 — RISK & VULNERABILITY (UPGRADED)
          ══════════════════════════════════════════════════════════ */}
       {activeTab === "risk" && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: '1.5rem' }}>
+        <div className="ciso-grid ciso-grid--wide" style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: '1.5rem' }}>
           <div className="liquid-glass" style={{ padding: '1.5rem', cursor: 'pointer' }} onClick={() => openDrillDown("Prioritized Risk Heatmap", vulns)}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
               <h3 style={{ fontSize: '0.85rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.6rem' }}><Target size={18} color="#f85149" /> Risk Heatmap: Severity vs Asset Criticality</h3>
@@ -1848,7 +1848,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
           </div>
 
           {/* SOC KPIs Row */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
+          <div className="ciso-grid ciso-grid--4" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem' }}>
             <KPICard 
               label="Avg MTT-Detection" 
               value={`${socPerformance?.avg_mttd_min || 0}m`} 
@@ -1880,7 +1880,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
           </div>
 
           {/* Compliance + Regulatory + Audit */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: '1.5rem' }}>
+          <div className="ciso-grid ciso-grid--triad" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr', gap: '1.5rem' }}>
             <div className="liquid-glass" style={{ padding: '2rem', textAlign: 'center' }}>
               <div style={{ cursor: 'pointer', transition: 'transform 0.2s' }} className="widget-hover" onClick={() => openCalculationDrillDown(
                 "Executive Index Calculation", 
@@ -1900,7 +1900,7 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
                 <div style={{ fontSize: '0.55rem', fontWeight: 900, color: 'var(--text-tertiary)', marginTop: '0.5rem' }}>DETAILS (GLOBAL) &gt;</div>
               </div>
               
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <div className="ciso-grid ciso-grid--2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginTop: '1.5rem' }}>
                 {[2, 1, 0, 4].map(idx => {
                   const f = compliance?.frameworks?.[idx];
                   if (!f) return null;
@@ -2409,6 +2409,15 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
           50% { opacity: 1; transform: scale(1.05); }
           100% { opacity: 0.6; transform: scale(1); }
         }
+        .ciso-dashboard-shell {
+          width: 100%;
+          max-width: 100%;
+          min-width: 0;
+        }
+        .ciso-grid {
+          width: 100%;
+          min-width: 0;
+        }
         .liquid-glass {
           background: rgba(255, 255, 255, 0.03);
           backdrop-filter: blur(12px);
@@ -2437,6 +2446,52 @@ export default function CISODashboard({ tenantId }: CISODashboardProps) {
         @keyframes slideIn {
           from { transform: translateX(30px); opacity: 0; }
           to { transform: translateX(0); opacity: 1; }
+        }
+        @media (max-width: 1440px) {
+          .ciso-grid--hero {
+            grid-template-columns: 1fr !important;
+          }
+          .ciso-grid--wide,
+          .ciso-grid--triad,
+          .ciso-grid--3,
+          .ciso-grid--4 {
+            grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+          }
+        }
+        @media (max-width: 1100px) {
+          .ciso-nav-row {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 0.9rem;
+          }
+          .ciso-nav-controls {
+            width: 100%;
+            justify-content: space-between !important;
+            padding-right: 0 !important;
+            flex-wrap: wrap;
+          }
+          .ciso-grid--2,
+          .ciso-grid--3,
+          .ciso-grid--wide,
+          .ciso-grid--triad,
+          .ciso-grid--4 {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 900px) {
+          .ciso-tab-strip {
+            width: 100%;
+          }
+          .ciso-console-header {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 0.9rem;
+          }
+          .ciso-console-actions {
+            width: 100%;
+            flex-wrap: wrap;
+            gap: 0.6rem;
+          }
         }
       `}</style>
     </div>

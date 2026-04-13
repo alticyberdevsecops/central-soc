@@ -280,7 +280,7 @@ async def list_incidents(
             params["search"] = f"%{search}%"
 
         where_clause = " AND ".join(conditions)
-        sort_col = sort_by if sort_by in ("created_at", "last_updated_at", "updated_at", "severity", "status", "source_vendor", "title") else "last_updated_at"
+        sort_col = sort_by if sort_by in ("created_at", "source_created_at", "last_updated_at", "updated_at", "severity", "status", "source_vendor", "title") else "last_updated_at"
         sort_direction = "DESC" if sort_dir.lower() == "desc" else "ASC"
         offset = (page - 1) * page_size
         params.update({"limit": page_size, "offset": offset})
